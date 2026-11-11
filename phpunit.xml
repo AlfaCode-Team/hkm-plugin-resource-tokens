@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/13.2/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+         failOnWarning="true"
+         failOnRisky="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <!--
+            Unit drives the minting and verification policy against an
+            in-memory store, with a frozen clock so expiry is testable without
+            sleeping.
+
+            Integration runs the real SQL against a database built by this
+            plugin's own migration. That is the only suite that can catch a
+            column that does not exist, a conditional UPDATE whose row count
+            the code never checks, or a unique index that is missing — and the
+            only one that can demonstrate the use-limit race, because the race
+            is between two SQL statements.
+        -->
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">API</directory>
+            <directory suffix=".php">Application</directory>
+            <directory suffix=".php">Domain</directory>
+            <directory suffix=".php">Infrastructure</directory>
+        </include>
+    </source>
+</phpunit>

@@ -1,0 +1,66 @@
+{
+    "name": "resource-tokens",
+    "version": "0.1.0",
+    "kernel": "^1.15.0",
+    "solves": "resource.tokens",
+    "type": "module",
+
+    "//kernel-floor": "1.15 is where DriverAware and the schedule[] grammar landed, and those are the two newest things used here. Everything else — $cli->defer(), $cli->command(instance), $http->filter(), the filter_args request attribute, ClockPort and LoggerPort — is older than that. The floor is the measured minimum rather than the current release on purpose: raising it to the newest tag would block installation on 1.15 to 1.18 deployments to buy nothing.",
+
+    "requires": [],
+
+    "exposes": [
+        "Plugins\\ResourceTokens\\API\\Contracts\\ResourceTokenContract"
+    ],
+
+    "routes": [],
+    "emits": [],
+    "files": [],
+
+    "documentation": "Mints a revocable, resource-scoped bearer token so a caller with no account can reach exactly one thing — a private image in an <img src>, a download link in an email, a PDF handed to an auditor. A token names ONE resource and the abilities it grants over it, optionally expires, optionally limits how many times it may be used, and can be withdrawn individually or for a whole resource. Verification is a question a route filter or a controller asks about a resource it has already resolved; the plugin registers no security layer and produces no Identity.",
+
+    "//why-not-signed-urls": "The kernel's UrlGenerator::signedRoute() is cheaper in every way and should be the first choice: no table, no query, no pruning. It cannot do four things, all of them because it stores nothing. It cannot be REVOKED, since nothing records that a URL was issued and there is no list to remove it from — 'we mailed that link to the wrong address' has no answer short of rotating APP_KEY, which invalidates every signed URL in the application. It cannot LIMIT USES, because counting is state. It cannot be AUDITED. And it cannot be LISTED, which is the question actually asked during an incident: what still opens this document. Need none of those, use signedRoute(); need any, use this.",
+
+    "//why-not-personal-access-tokens": "The Auth plugin's PATs belong to a USER and carry abilities across the whole application. These belong to a RESOURCE, carry abilities over that resource alone, and have no user anywhere — the recipient typically has no account. The STORAGE scheme here is deliberately identical to that plugin's (random secret, SHA-256 digest, raw value returned once), because the reasoning is the same and two first-party plugins disagreeing about how to store a token would be a defect in one of them.",
+
+    "//no-security-layer": "A SecurityLayerContract runs before any module loads and before a route is matched, and its job is to produce an Identity. A resource token must never do either. If it minted an Identity, every token would be an account that passed the gateway and reached every route in the application, and the resource it was minted for would be a comment on a row. Verification therefore happens AFTER routing, against a resource the router already resolved.",
+
+    "//no-routes": "Who may mint a token for a given resource is the same question as who may read that resource, and only the application can answer it. A shipped POST /tokens endpoint would have to either refuse everybody or trust a caller's claim about a resource it cannot check — which is privilege escalation dressed as a convenience: mint a token for somebody else's file, then use it. The application exposes its own route, runs its own check, and calls mint() once it passes.",
+
+    "//the-filter-needs-requires": "A route declaring \"filters\": [\"restoken:file,id\"] MUST also declare \"requires\": [\"resource.tokens\"]. A module's register() only runs when it is in that request's dependency graph, so the alias resolving does not imply the bindings exist. The stage fails the request with a message naming the fix rather than passing: failing open there would turn one missing line of JSON into a private file served to anybody who asked.",
+
+    "//a-query-string-token-is-logged": "RESOURCE_TOKENS_HEADER is preferred over RESOURCE_TOKENS_QUERY_PARAM because a query string is written to a web server's access log, kept in browser history, and sent onward in a Referer header from any outbound link on the page. The query string is supported anyway because it is the only option for the case this plugin exists for — a browser fetching an <img src> cannot set a header. Short lifetimes and use limits are the mitigation, which is why the default TTL is an hour and not a year.",
+
+    "//sha256-not-bcrypt": "A 32-byte random secret has nothing to guess, so a deliberately slow hash buys no resistance to the attack it exists for. It would cost the lookup: bcrypt and Argon2 salt per row, so a presented value's digest cannot be computed without first knowing which row it belongs to — which means either a plaintext column to find the row by, or verifying against every row in the table with a deliberately expensive operation per row, which is a denial-of-service endpoint anyone can dial by sending junk. See Domain/TokenDigest.",
+
+    "commands": [
+        "Plugins\\ResourceTokens\\Infrastructure\\Cli\\TokenStatusCommand",
+        "Plugins\\ResourceTokens\\Infrastructure\\Cli\\TokenListCommand",
+        "Plugins\\ResourceTokens\\Infrastructure\\Cli\\TokenRevokeCommand",
+        "Plugins\\ResourceTokens\\Infrastructure\\Cli\\TokenPruneCommand"
+    ],
+
+    "//no-mint-command": "Minting is absent from the CLI on purpose: it returns a secret that must be shown once, and a CLI would put it in shell history and in `ps` output. Revoking takes a token ID or a resource for the same reason — never the token itself.",
+
+    "schedule": [
+        {
+            "name": "resource-tokens.prune",
+            "at": "41 4 * * *",
+            "command": "restokens:prune --yes",
+            "withoutOverlapping": true,
+            "expiresAfter": 3600
+        }
+    ],
+
+    "config": [
+        { "key": "RESOURCE_TOKENS_DEFAULT_TTL", "type": "int", "required": false, "default": 3600 },
+        { "key": "RESOURCE_TOKENS_MAX_TTL", "type": "int", "required": false, "default": 0 },
+        { "key": "RESOURCE_TOKENS_ALLOW_PERMANENT", "type": "bool", "required": false, "default": true },
+        { "key": "RESOURCE_TOKENS_MAX_PER_RESOURCE", "type": "int", "required": false, "default": 100 },
+        { "key": "RESOURCE_TOKENS_PRUNE_AFTER_DAYS", "type": "int", "required": false, "default": 30 },
+        { "key": "RESOURCE_TOKENS_TRACK_USES", "type": "bool", "required": false, "default": true },
+        { "key": "RESOURCE_TOKENS_QUERY_PARAM", "type": "string", "required": false, "default": "token" },
+        { "key": "RESOURCE_TOKENS_HEADER", "type": "string", "required": false, "default": "X-Resource-Token" },
+        { "key": "RESOURCE_TOKENS_REFUSED_STATUS", "type": "int", "required": false, "default": 404 }
+    ]
+}

@@ -1,0 +1,57 @@
+{
+    "name": "alfacode-team/hkm-plugin-resource-tokens",
+    "description": "HKM Kernel plugin providing 'resource.tokens' — revocable, resource-scoped bearer tokens so a caller with no account can reach exactly one thing.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "hkm-kernel",
+        "plugin",
+        "php",
+        "tokens",
+        "file-tokens",
+        "share-links",
+        "signed-urls",
+        "revocation",
+        "resource.tokens"
+    ],
+    "require": {
+        "php": ">=8.4",
+        "alfacode-team/php-service-platform": "dev-master"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11 || ^12 || ^13"
+    },
+    "autoload": {
+        "psr-4": {
+            "Plugins\\ResourceTokens\\": ""
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/AlfaCode-Team/hkm-kernel"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/AlfaCode-Team/http"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/AlfaCode-Team/php-io-cli"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/AlfaCode-Team/Let-Migrate"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hakrichTech/bindIt"
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/hakrichTech/type-alias"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
